@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://postfiat.org/schemas/producer-signal/v1.0.0",
+  "title": "Post Fiat Producer Signal Schema",
+  "description": "Canonical signal contract for the Post Fiat network. Defines the standard format for any producer emitting directional signals with calibrated confidence, regime context, and routing actions. Designed for machine consumption: downstream parsers, scoring bots, and intelligence layers (e.g. Hive Mind) can validate and ingest signals using only this schema and the companion validate_signal.py script.",
+
+  "$defs": {
+
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version string (MAJOR.MINOR.PATCH). MAJOR = breaking change to required fields, MINOR = new optional fields, PATCH = description/annotation fixes.",
+      "examples": ["1.0.0", "1.1.0", "2.0.0"]
+    },
+
+    "iso_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp. MUST include timezone (UTC recommended). Signals without timezone are ambiguous and will fail validation.",
+      "examples": ["2026-03-26T16:45:35.029Z", "2026-03-29T10:00:00+00:00"]
+    },
+
+    "direction": {
+      "type": "string",
+      "enum": ["bullish", "bearish"],
+      "description": "Predicted price direction over the horizon window. 'bullish' = price expected to rise, 'bearish' = price expected to fall. NOTE: during SYSTEMIC regime, bearish signals typically express capital preservation (low confidence), not high-conviction short recommendations. Consumers should check the 'action' field to determine whether to act."
+    },
+
+    "action": {
+      "type": "string",
+      "enum": ["EXECUTE", "WITHHOLD", "INVERT"],
+      "description": "Routing decision for this signal. EXECUTE = act on direction + confidence as stated. WITHHOLD = signal exists for record-keeping but should not be traded (e.g. regime suppression, insufficient confidence). INVERT = act opposite to stated direction (used for symbols where the producer's directional model is reliably wrong, e.g. anti-correlated). Consumers MUST respect this field: an INVERT signal with direction='bearish' means the consumer should treat it as bullish."
+    },
+
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Signal confidence as a calibrated probability. 0.0 = no confidence, 1.0 = certainty. MUST be on 0-1 scale (not 0-100). A well-calibrated producer's 0.60 confidence should resolve correctly ~60% of the time. Consumers can verify calibration quality via the producer's proof surface."
+    },
+
+    "regime_context": {
+      "type": "object",
+      "description": "Market regime metadata. Provides context for WHY the signal has the confidence/action it does. Optional but strongly recommended for STANDARD and FULL conformance.",
+      "properties": {
+        "regime_id": {
+          "type": "string",
+          "enum": ["SYSTEMIC", "NEUTRAL", "DIVERGENCE", "EARNINGS", "UNKNOWN"],
+          "description": "Current regime classification. SYSTEMIC = correlated risk-off (signals suppressed, correlations spike). NEUTRAL = normal dispersion (signals most actionable). DIVERGENCE = sector rotation. EARNINGS = event-driven. UNKNOWN = insufficient data for classification."
+        },
+        "regime_confidence": {
+          "$ref": "#/$defs/confidence",
+          "description": "Confidence in the regime classification itself (0-1 scale). NOTE: some internal systems use 0-100 integer scale; this schema normalizes to 0-1. If your source uses 0-100, divide by 100 before emission."
+        },
+        "proximity": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Regime transition proximity score. 0.0 = deep in current regime (stable), 1.0 = transition imminent. Useful for consumers who want to adjust position sizing near regime boundaries."
+        },
+        "duration_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Calendar days since the current regime was entered. Combined with proximity, this enables duration-gated strategies (e.g. suppress signals in first N days of a new regime)."
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["NO_TRADE", "EXECUTE", "MONITOR"],
+          "description": "Regime-level execution decision. NO_TRADE = capital preservation mode. EXECUTE = regime supports trading. MONITOR = watch for regime change. This is the regime-level version of the signal 'action' field."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "calibration_metadata": {
+      "type": "object",
+      "description": "How the producer derived confidence and direction. Enables downstream systems to assess signal quality without trusting a single number.",
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Calibration method identifier. Examples: 'empirical_conditional' (data-driven P(direction|regime,symbol)), 'model_ensemble' (multi-model voting), 'expert_judgment' (human-assigned).",
+          "examples": ["empirical_conditional", "model_ensemble", "bayesian_posterior", "expert_judgment"]
+        },
+        "sample_size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of historical observations used to derive this confidence level. Low sample sizes (< 30) should trigger consumer caution."
+        },
+        "empirical_hit_rate": {
+          "$ref": "#/$defs/confidence",
+          "description": "Observed accuracy on historical/backtest data for this (symbol, regime, horizon) combination. Consumers can compare this to the confidence field to check for overconfidence."
+        },
+        "brier_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Historical Brier score for this signal type. 0.25 = coin flip baseline for balanced outcomes. Lower is better. Enables consumers to filter on calibration quality."
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "weak_symbol_metadata": {
+      "type": "object",
+      "description": "Diagnosis when a symbol's signal quality is below network standards. Present when the producer has identified this symbol as unreliable in its current direction.",
+      "properties": {
+        "weakness_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Composite weakness score (0 = strong, 1 = maximally weak). Severity thresholds: NONE < 0.2, MILD < 0.4, MODERATE < 0.6, SEVERE >= 0.6."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["NONE", "MILD", "MODERATE", "SEVERE"],
+          "description": "Human-readable severity bucket derived from weakness_score."
+        },
+        "original_direction": {
+          "$ref": "#/$defs/direction",
+          "description": "The direction BEFORE inversion was applied. Only meaningful when action=INVERT. Allows consumers to see what the raw model predicted vs what the routing decision overrode."
+        },
+        "inversion_p_value": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Statistical significance of the inversion decision (z-test p-value). Low values (< 0.01) indicate strong evidence that inversion improves outcomes."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "signal": {
+      "type": "object",
+      "title": "Producer Signal",
+      "description": "The atomic unit of producer output on the Post Fiat network. Each signal represents a directional prediction for a specific symbol over a defined time horizon, with a calibrated confidence level and a routing action that tells consumers how to use it.",
+
+      "required": [
+        "signal_id",
+        "producer_id",
+        "timestamp",
+        "symbol",
+        "direction",
+        "confidence",
+        "horizon_hours",
+        "action",
+        "schema_version"
+      ],
+
+      "properties": {
+        "signal_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Producer-assigned unique identifier. Recommended format: '{producer_prefix}-{SYMBOL}-{UNIX_TIMESTAMP}' (e.g. 'pf-BTC-1773960268'). Must be unique across all signals from this producer. Used for deduplication, traceability, and attribution window matching.",
+          "examples": ["pf-BTC-1773960268", "mybot-ETH-1774100000", "alpha1-SOL-1774200000"]
+        },
+
+        "producer_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique producer identifier as registered with the network or downstream consumer. This is the producer's public identity string, not a wallet address.",
+          "examples": ["post-fiat-signals", "alpha-research-bot", "quant-desk-1"]
+        },
+
+        "timestamp": {
+          "$ref": "#/$defs/iso_timestamp",
+          "description": "Signal emission time. When this signal was generated and pushed. Must include timezone."
+        },
+
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^[A-Z0-9]+$",
+          "description": "Ticker symbol in canonical short form. Use the base currency for crypto (BTC not BTC-USD or BTC/USD). Use standard exchange tickers for equities. All uppercase, alphanumeric only.",
+          "examples": ["BTC", "ETH", "SOL", "LINK", "NVDA", "AVGO"]
+        },
+
+        "direction": {
+          "$ref": "#/$defs/direction"
+        },
+
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+
+        "horizon_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8760,
+          "description": "Attribution window in hours. The time window over which the directional prediction should be evaluated. Common values: 1, 2, 4, 6, 8, 12, 24 (intraday), 168 (1 week), 336 (2 weeks). Consumers use this to know when to score the signal against realized outcomes.",
+          "examples": [1, 4, 12, 24, 168, 336]
+        },
+
+        "action": {
+          "$ref": "#/$defs/action"
+        },
+
+        "schema_version": {
+          "$ref": "#/$defs/semver",
+          "description": "Version of this schema the signal conforms to. Consumers should check this to handle version-specific parsing."
+        },
+
+        "regime_context": {
+          "$ref": "#/$defs/regime_context"
+        },
+
+        "attribution_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 hex digest of the canonical signal payload (signal_id + symbol + direction + confidence + horizon_hours + timestamp, concatenated with '|' delimiter). Enables tamper detection and cross-surface traceability. Optional but required for FULL conformance.",
+          "examples": ["a1b2c3d4e5f6789012345678901234567890123456789012345678901234abcd"]
+        },
+
+        "calibration": {
+          "$ref": "#/$defs/calibration_metadata"
+        },
+
+        "weak_symbol": {
+          "$ref": "#/$defs/weak_symbol_metadata"
+        },
+
+        "metadata": {
+          "type": "object",
+          "description": "Producer-specific extension fields. Anything not covered by the canonical schema goes here. Consumers should ignore fields they do not understand. Use this for internal tracking, model IDs, experiment tags, etc.",
+          "additionalProperties": true
+        }
+      },
+
+      "additionalProperties": false,
+
+      "if": {
+        "properties": { "action": { "const": "INVERT" } }
+      },
+      "then": {
+        "required": ["weak_symbol"],
+        "properties": {
+          "weak_symbol": {
+            "required": ["weakness_score", "severity", "original_direction"]
+          }
+        }
+      }
+    },
+
+    "signal_batch": {
+      "type": "object",
+      "title": "Signal Batch",
+      "description": "A batch of signals emitted together (e.g. one push cycle). Useful for consumers ingesting multiple signals atomically.",
+      "required": ["batch_id", "producer_id", "timestamp", "schema_version", "signals"],
+      "properties": {
+        "batch_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique batch identifier.",
+          "examples": ["batch-1773960268", "cycle-2026-03-29T10:00:00Z"]
+        },
+        "producer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timestamp": {
+          "$ref": "#/$defs/iso_timestamp"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "regime_context": {
+          "$ref": "#/$defs/regime_context",
+          "description": "Batch-level regime context. If present, applies to all signals in the batch unless a signal has its own regime_context."
+        },
+        "signals": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/signal" },
+          "description": "Array of signals in this batch."
+        },
+        "signal_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of signals in this batch. Consumers can use this for integrity checks."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "oneOf": [
+    { "$ref": "#/$defs/signal" },
+    { "$ref": "#/$defs/signal_batch" }
+  ]
+}

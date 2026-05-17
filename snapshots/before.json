@@ -1,0 +1,140 @@
+{
+  "schema": "pf-sovereign-signals/v1",
+  "producer_id": "post-fiat-signals",
+  "source_wallet": "rfLJ4ZRnqmGFLAcMvCD56nKGbjpdTJmMqo",
+  "generated_at": "2026-05-16T22:00:00.000Z",
+  "regime": {
+    "state": "SYSTEMIC",
+    "confidence": 77,
+    "duration_days": 72,
+    "proximity": 0.012,
+    "regime_policy": "SUPPRESS_DIRECTION"
+  },
+  "signals": {
+    "published": [
+      {
+        "signal_id": "pf-BTC-1779014067361",
+        "symbol": "BTC",
+        "direction": "NEUTRAL",
+        "signal_type": "TRANSITION_TIMING",
+        "confidence": 0.51,
+        "expected_karma": 0.02,
+        "horizon_hours": 24,
+        "regime": "SYSTEMIC",
+        "regime_confidence": 77,
+        "regime_duration_days": 72,
+        "proximity": 0.012,
+        "voi_included": true,
+        "voi_suppressed": false,
+        "duration_gated": false,
+        "weak_symbol_inverted": false,
+        "policy_gates_applied": {
+          "weak_symbol": false,
+          "duration_gate": false,
+          "voi_filter": false,
+          "regime_filter": true
+        },
+        "timestamp": "2026-05-17T10:34:27.361Z"
+      },
+      {
+        "signal_id": "pf-ETH-1779014067361",
+        "symbol": "ETH",
+        "direction": "NEUTRAL",
+        "signal_type": "TRANSITION_TIMING",
+        "confidence": 0.52,
+        "expected_karma": 0.04,
+        "horizon_hours": 24,
+        "regime": "SYSTEMIC",
+        "regime_confidence": 77,
+        "regime_duration_days": 72,
+        "proximity": 0.012,
+        "voi_included": true,
+        "voi_suppressed": false,
+        "duration_gated": false,
+        "weak_symbol_inverted": false,
+        "policy_gates_applied": {
+          "weak_symbol": false,
+          "duration_gate": false,
+          "voi_filter": false,
+          "regime_filter": true
+        },
+        "timestamp": "2026-05-17T10:34:27.361Z"
+      },
+      {
+        "signal_id": "pf-SOL-1779014067361",
+        "symbol": "SOL",
+        "direction": "NEUTRAL",
+        "signal_type": "TRANSITION_TIMING",
+        "confidence": 0.56,
+        "expected_karma": 0.12,
+        "horizon_hours": 24,
+        "regime": "SYSTEMIC",
+        "regime_confidence": 77,
+        "regime_duration_days": 72,
+        "proximity": 0.012,
+        "voi_included": true,
+        "voi_suppressed": false,
+        "duration_gated": false,
+        "weak_symbol_inverted": true,
+        "policy_gates_applied": {
+          "weak_symbol": true,
+          "duration_gate": false,
+          "voi_filter": false,
+          "regime_filter": true
+        },
+        "timestamp": "2026-05-17T10:34:27.361Z"
+      },
+      {
+        "signal_id": "pf-LINK-1779014067361",
+        "symbol": "LINK",
+        "direction": "NEUTRAL",
+        "signal_type": "TRANSITION_TIMING",
+        "confidence": 0.53,
+        "expected_karma": 0.06,
+        "horizon_hours": 24,
+        "regime": "SYSTEMIC",
+        "regime_confidence": 77,
+        "regime_duration_days": 72,
+        "proximity": 0.012,
+        "voi_included": true,
+        "voi_suppressed": false,
+        "duration_gated": false,
+        "weak_symbol_inverted": false,
+        "policy_gates_applied": {
+          "weak_symbol": false,
+          "duration_gate": false,
+          "voi_filter": false,
+          "regime_filter": true
+        },
+        "timestamp": "2026-05-17T10:34:27.361Z"
+      }
+    ],
+    "suppressed": [],
+    "total_generated": 4,
+    "total_published": 4,
+    "total_suppressed": 0
+  },
+  "policy_summary": {
+    "weak_symbol_inversions": [
+      {
+        "symbol": "SOL",
+        "original": 1,
+        "inverted": -1,
+        "reason": "accuracy 44.0% \u2192 56.0% inverted (p=0.0039)"
+      }
+    ],
+    "duration_gated_signals": 0,
+    "voi_suppressions": 0,
+    "regime_filter": "SUPPRESS_DIRECTION"
+  },
+  "metadata": {
+    "api_source": "localhost:8080",
+    "api_reachable": true,
+    "oracle_dependency": null,
+    "legacy_oracle_removed": true,
+    "self_hosted": true,
+    "horizon_hours": 24,
+    "server_uptime_sec": 250
+  },
+  "content_hash": "88d5250fc9aa868a443196fb8c446dec3771cf55f8a2d5a35a343e8593701bd2"
+}

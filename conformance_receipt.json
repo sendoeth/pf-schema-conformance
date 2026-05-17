@@ -1,0 +1,163 @@
+{
+  "receipt_id": "SCR-f3ac9dd1a6e9",
+  "schema_version": "1.0.0",
+  "generator_version": "1.0.0",
+  "generated_at": "2026-05-17T10:36:24.879Z",
+  "producer_id": "post-fiat-signals",
+  "endpoint": "http://localhost:8080/signals/latest",
+  "canonical_schema": {
+    "name": "producer_signal_schema.json",
+    "version": "https://postfiat.org/schemas/producer-signal/v1.0.0",
+    "content_hash": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1"
+  },
+  "mismatch": {
+    "mismatch_id": "action_field_missing",
+    "field": "action",
+    "description": "The 'action' field is required by producer_signal_schema.json v1.0.0 (lines 145, 194-196). It MUST be one of: EXECUTE, WITHHOLD, INVERT. Consumers MUST respect this field for routing decisions.",
+    "remediation_applied": "Add 'action' to every emitted signal. Derive it from policy gates: INVERT if weak_symbol inverted, WITHHOLD if regime-suppressed or VOI-filtered, EXECUTE otherwise.",
+    "severity": "REQUIRED_FIELD_MISSING",
+    "schema_reference": "producer_signal_schema.json#/$defs/signal/required"
+  },
+  "patch": {
+    "file_patched": "signal_api.js",
+    "line": 85,
+    "change_type": "FIELD_ADDITION",
+    "description": "Added 'action' field derivation to sovereign signal output. Logic: INVERT if weak_symbol inverted, WITHHOLD if VOI-suppressed or regime-filtered, EXECUTE otherwise.",
+    "code_added": "const action = inv ? 'INVERT' : (voiSup || !rp.pubDir ? 'WITHHOLD' : 'EXECUTE');",
+    "derivation_logic": {
+      "INVERT": "weak_symbol_inverted == true (symbol accuracy < 50%, policy is INVERT)",
+      "WITHHOLD": "regime_filter active (SYSTEMIC \u2192 SUPPRESS_DIRECTION) OR voi_filter active (expected karma < threshold)",
+      "EXECUTE": "no suppression gates triggered, signal is actionable"
+    },
+    "signals_affected": "all (BTC, ETH, SOL, LINK)"
+  },
+  "before": {
+    "snapshot_path": "snapshots/before.json",
+    "snapshot_hash": "aff793958ecde0e60d09afa22857b615d1b1be2b45bd1e2d485fbbd2622b3752",
+    "captured_at": "2026-05-16T22:00:00.000Z",
+    "result": {
+      "verdict": "FAIL",
+      "signals_checked": 4,
+      "signals_passed": 0,
+      "signals_failed": 4,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779014067361",
+          "symbol": "BTC",
+          "passed": false,
+          "detail": "action=MISSING; N/A (field missing); N/A (field missing); N/A (field missing or invalid type)"
+        },
+        {
+          "signal_id": "pf-ETH-1779014067361",
+          "symbol": "ETH",
+          "passed": false,
+          "detail": "action=MISSING; N/A (field missing); N/A (field missing); N/A (field missing or invalid type)"
+        },
+        {
+          "signal_id": "pf-SOL-1779014067361",
+          "symbol": "SOL",
+          "passed": false,
+          "detail": "action=MISSING; N/A (field missing); N/A (field missing); N/A (field missing or invalid type)"
+        },
+        {
+          "signal_id": "pf-LINK-1779014067361",
+          "symbol": "LINK",
+          "passed": false,
+          "detail": "action=MISSING; N/A (field missing); N/A (field missing); N/A (field missing or invalid type)"
+        }
+      ]
+    }
+  },
+  "after": {
+    "endpoint": "http://localhost:8080/signals/latest",
+    "snapshot_hash": "a1a6141147cbda2a2192e92ef479c37d824517e6f0e1c6766256e1881e934c08",
+    "captured_at": "2026-05-17T10:36:24.902Z",
+    "result": {
+      "verdict": "PASS",
+      "signals_checked": 4,
+      "signals_passed": 4,
+      "signals_failed": 0,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779014184902",
+          "symbol": "BTC",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-ETH-1779014184902",
+          "symbol": "ETH",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-SOL-1779014184902",
+          "symbol": "SOL",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-LINK-1779014184902",
+          "symbol": "LINK",
+          "passed": true,
+          "detail": "all checks passed"
+        }
+      ]
+    }
+  },
+  "conformance_summary": {
+    "final_verdict": "PASS",
+    "status_change": "FIXED",
+    "before_verdict": "FAIL",
+    "after_verdict": "PASS",
+    "field_checked": "action",
+    "before_signals_passing": 0,
+    "after_signals_passing": 4,
+    "total_signals_checked": 4
+  },
+  "conformance_command": "python3 check_conformance.py --endpoint http://localhost:8080/signals/latest --schema producer_signal_schema.json --mismatch action_field_missing --before-snapshot snapshots/before.json -o conformance_receipt.json --summary",
+  "source_hashes": {
+    "schema": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1",
+    "before_snapshot": "aff793958ecde0e60d09afa22857b615d1b1be2b45bd1e2d485fbbd2622b3752",
+    "after_snapshot": "a1a6141147cbda2a2192e92ef479c37d824517e6f0e1c6766256e1881e934c08"
+  },
+  "limitations": [
+    {
+      "id": "L01",
+      "description": "Before snapshot is stored, not captured live in same session",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L02",
+      "description": "Conformance checks single mismatch, not full schema validation",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "MODERATE"
+    },
+    {
+      "id": "L03",
+      "description": "Point-in-time check; future code changes could regress",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L04",
+      "description": "Policy consistency check infers expected action from gate flags, not from source logic",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L05",
+      "description": "INVERT conditional check (weak_symbol metadata) not fully testable under SYSTEMIC regime",
+      "bias_direction": "UNDERSTATED_RISK",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L06",
+      "description": "After snapshot fetched at check time; signals may differ from moment of patch verification",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    }
+  ],
+  "content_hash": "9a7bba7e9ec0c4646067262867461aa0eadff011128818d00d4d898a808f0417"
+}

@@ -1,0 +1,159 @@
+{
+  "receipt_id": "SCR-5f6dd14bc820",
+  "schema_version": "1.0.0",
+  "generator_version": "1.0.0",
+  "generated_at": "2026-05-20T11:54:25.168Z",
+  "producer_id": "post-fiat-signals",
+  "endpoint": "http://localhost:8080/signals/latest",
+  "canonical_schema": {
+    "name": "producer_signal_schema.json",
+    "version": "https://postfiat.org/schemas/producer-signal/v1.0.0",
+    "content_hash": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1"
+  },
+  "mismatch": {
+    "mismatch_id": "regime_context_flat",
+    "field": "regime_context",
+    "description": "The schema defines regime metadata as a nested 'regime_context' object with fields: regime_id, regime_confidence, proximity, duration_days, decision. The live API was emitting these as flat top-level fields: regime, regime_confidence, regime_duration_days, proximity.",
+    "remediation_applied": "Restructure flat regime fields into a nested regime_context object. Map: regime \u2192 regime_context.regime_id, regime_confidence \u2192 regime_context.regime_confidence, regime_duration_days \u2192 regime_context.duration_days (integer), proximity \u2192 regime_context.proximity. Add regime_context.decision derived from regime policy (SUPPRESS_DIRECTION \u2192 NO_TRADE, PUBLISH \u2192 EXECUTE).",
+    "severity": "STRUCTURAL_MISMATCH",
+    "schema_reference": "producer_signal_schema.json#/$defs/regime_context"
+  },
+  "patch": {
+    "file_patched": "signal_api.js",
+    "lines": "94-107",
+    "change_type": "STRUCTURAL_REFACTOR",
+    "description": "Replaced flat regime fields (regime, regime_confidence, regime_duration_days, proximity) with a nested regime_context object matching the schema definition. Added decision field derived from regime policy (SUPPRESS_DIRECTION \u2192 NO_TRADE, PUBLISH \u2192 EXECUTE). Ensured duration_days is integer via Math.floor().",
+    "code_before": "regime, regime_confidence: regimeConf, regime_duration_days: dur, proximity: prox,",
+    "code_after": "regime_context: { regime_id: regime, regime_confidence: regimeConf, proximity: prox, duration_days: Math.floor(dur), decision: regimeDecision },",
+    "signals_affected": "all (BTC, ETH, SOL, LINK)"
+  },
+  "before": {
+    "snapshot_path": "snapshots/before_mismatch4_5.json",
+    "snapshot_hash": "573e18304fe101a7165d8f22970553aa5dab37b4c079dc1d937eb5344cf8b11d",
+    "captured_at": "2026-05-20T11:49:07.815Z",
+    "result": {
+      "verdict": "FAIL",
+      "signals_checked": 4,
+      "signals_passed": 0,
+      "signals_failed": 4,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779277747815",
+          "symbol": "BTC",
+          "passed": false,
+          "detail": "MISSING (regime fields may be flat on signal object); flat regime fields found at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing)"
+        },
+        {
+          "signal_id": "pf-ETH-1779277747815",
+          "symbol": "ETH",
+          "passed": false,
+          "detail": "MISSING (regime fields may be flat on signal object); flat regime fields found at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing)"
+        },
+        {
+          "signal_id": "pf-SOL-1779277747815",
+          "symbol": "SOL",
+          "passed": false,
+          "detail": "MISSING (regime fields may be flat on signal object); flat regime fields found at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing)"
+        },
+        {
+          "signal_id": "pf-LINK-1779277747815",
+          "symbol": "LINK",
+          "passed": false,
+          "detail": "MISSING (regime fields may be flat on signal object); flat regime fields found at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing); N/A (regime_context missing)"
+        }
+      ]
+    }
+  },
+  "after": {
+    "endpoint": "http://localhost:8080/signals/latest",
+    "snapshot_hash": "33fa1f417269164f090f3b9690989a0a90a9b66040231c222885e3addcffdea5",
+    "captured_at": "2026-05-20T11:54:25.195Z",
+    "result": {
+      "verdict": "PASS",
+      "signals_checked": 4,
+      "signals_passed": 4,
+      "signals_failed": 0,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779278065195",
+          "symbol": "BTC",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-ETH-1779278065195",
+          "symbol": "ETH",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-SOL-1779278065195",
+          "symbol": "SOL",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-LINK-1779278065195",
+          "symbol": "LINK",
+          "passed": true,
+          "detail": "all checks passed"
+        }
+      ]
+    }
+  },
+  "conformance_summary": {
+    "final_verdict": "PASS",
+    "status_change": "FIXED",
+    "before_verdict": "FAIL",
+    "after_verdict": "PASS",
+    "field_checked": "regime_context",
+    "before_signals_passing": 0,
+    "after_signals_passing": 4,
+    "total_signals_checked": 4
+  },
+  "conformance_command": "python3 check_conformance.py --endpoint http://localhost:8080/signals/latest --schema producer_signal_schema.json --mismatch regime_context_flat --before-snapshot snapshots/before_mismatch4_5.json -o conformance_receipt.json --summary",
+  "source_hashes": {
+    "schema": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1",
+    "before_snapshot": "573e18304fe101a7165d8f22970553aa5dab37b4c079dc1d937eb5344cf8b11d",
+    "after_snapshot": "33fa1f417269164f090f3b9690989a0a90a9b66040231c222885e3addcffdea5"
+  },
+  "limitations": [
+    {
+      "id": "L01",
+      "description": "Before snapshot is stored, not captured live in same session",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L02",
+      "description": "Conformance checks single mismatch, not full schema validation",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "MODERATE"
+    },
+    {
+      "id": "L03",
+      "description": "Point-in-time check; future code changes could regress",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L04",
+      "description": "Policy consistency check infers expected action from gate flags, not from source logic",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L05",
+      "description": "INVERT conditional check (weak_symbol metadata) not fully testable under SYSTEMIC regime",
+      "bias_direction": "UNDERSTATED_RISK",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L06",
+      "description": "After snapshot fetched at check time; signals may differ from moment of patch verification",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    }
+  ],
+  "content_hash": "5bb41b61b36732a0239eb07b6aa790d52aeb0c9eb7e3e12a28938ecb82199383"
+}

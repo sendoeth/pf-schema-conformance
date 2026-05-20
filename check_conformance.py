@@ -179,13 +179,17 @@ class ActionFieldMissing(MismatchChecker):
         })
 
         # Sub-check 4: consistency with policy gates
+        # Gate fields may be at top level (legacy) or inside metadata (v1.1+)
         consistency_ok = True
         consistency_detail = ""
         if present and type_ok:
-            gates = signal.get("policy_gates_applied", {})
-            inverted = signal.get("weak_symbol_inverted", False) or gates.get("weak_symbol", False)
+            meta = signal.get("metadata", {}) if isinstance(signal.get("metadata"), dict) else {}
+            gates = signal.get("policy_gates_applied", meta.get("policy_gates_applied", {}))
+            inverted = (signal.get("weak_symbol_inverted", meta.get("weak_symbol_inverted", False))
+                        or gates.get("weak_symbol", False))
             regime_sup = gates.get("regime_filter", False)
-            voi_sup = signal.get("voi_suppressed", False) or gates.get("voi_filter", False)
+            voi_sup = (signal.get("voi_suppressed", meta.get("voi_suppressed", False))
+                       or gates.get("voi_filter", False))
 
             expected = "EXECUTE"
             if inverted:
@@ -411,11 +415,248 @@ class DirectionEnumInvalid(MismatchChecker):
         return {"passed": all_passed, "checks": checks}
 
 
+class RegimeContextFlat(MismatchChecker):
+    """Checks whether regime fields are properly nested under regime_context."""
+
+    mismatch_id = "regime_context_flat"
+    field_name = "regime_context"
+    severity = "STRUCTURAL_MISMATCH"
+    schema_reference = "producer_signal_schema.json#/$defs/regime_context"
+    description = (
+        "The schema defines regime metadata as a nested 'regime_context' object "
+        "with fields: regime_id, regime_confidence, proximity, duration_days, "
+        "decision. The live API was emitting these as flat top-level fields: "
+        "regime, regime_confidence, regime_duration_days, proximity."
+    )
+    remediation = (
+        "Restructure flat regime fields into a nested regime_context object. "
+        "Map: regime → regime_context.regime_id, regime_confidence → "
+        "regime_context.regime_confidence, regime_duration_days → "
+        "regime_context.duration_days (integer), proximity → "
+        "regime_context.proximity. Add regime_context.decision derived from "
+        "regime policy (SUPPRESS_DIRECTION → NO_TRADE, PUBLISH → EXECUTE)."
+    )
+
+    VALID_REGIME_IDS = {"SYSTEMIC", "NEUTRAL", "DIVERGENCE", "EARNINGS", "UNKNOWN"}
+    VALID_DECISIONS = {"NO_TRADE", "EXECUTE", "MONITOR"}
+
+    def check_signal(self, signal: dict, schema_reqs: dict) -> dict:
+        checks = []
+        rc = signal.get("regime_context")
+
+        # Sub-check 1: regime_context present (not flat fields)
+        rc_present = rc is not None and isinstance(rc, dict)
+        checks.append({
+            "check": "regime_context_present",
+            "passed": rc_present,
+            "detail": (
+                f"regime_context={{'...'}}" if rc_present
+                else "MISSING (regime fields may be flat on signal object)"
+            ),
+        })
+
+        # Sub-check 2: no flat regime fields at top level
+        flat_fields = {"regime", "regime_confidence", "regime_duration_days", "proximity"}
+        found_flat = flat_fields & set(signal.keys())
+        no_flat = len(found_flat) == 0
+        checks.append({
+            "check": "no_flat_regime_fields",
+            "passed": no_flat,
+            "detail": (
+                "no flat regime fields at top level"
+                if no_flat
+                else f"flat regime fields found at top level: {sorted(found_flat)}"
+            ),
+        })
+
+        if not rc_present:
+            # Remaining checks can't run
+            for name in ("regime_id_valid", "regime_confidence_bounded",
+                         "duration_days_integer", "proximity_bounded",
+                         "decision_valid"):
+                checks.append({
+                    "check": name, "passed": False,
+                    "detail": "N/A (regime_context missing)",
+                })
+            return {"passed": False, "checks": checks}
+
+        # Sub-check 3: regime_id valid enum
+        rid = rc.get("regime_id")
+        rid_ok = isinstance(rid, str) and rid in self.VALID_REGIME_IDS
+        checks.append({
+            "check": "regime_id_valid",
+            "passed": rid_ok,
+            "detail": (
+                f"regime_id='{rid}' ({'valid' if rid_ok else 'INVALID'})"
+                if rid is not None else "regime_id=MISSING"
+            ),
+        })
+
+        # Sub-check 4: regime_confidence bounded [0, 1] or [0, 100]
+        rconf = rc.get("regime_confidence")
+        rconf_present = rconf is not None and isinstance(rconf, (int, float))
+        rconf_ok = rconf_present and 0 <= rconf <= 100
+        checks.append({
+            "check": "regime_confidence_bounded",
+            "passed": rconf_ok,
+            "detail": (
+                f"regime_confidence={rconf}"
+                if rconf_present else "regime_confidence=MISSING"
+            ),
+        })
+
+        # Sub-check 5: duration_days is integer
+        dd = rc.get("duration_days")
+        dd_ok = isinstance(dd, int) and dd >= 0
+        checks.append({
+            "check": "duration_days_integer",
+            "passed": dd_ok,
+            "detail": (
+                f"duration_days={dd} (type={type(dd).__name__})"
+                if dd is not None else "duration_days=MISSING"
+            ),
+        })
+
+        # Sub-check 6: proximity bounded [0, 1]
+        prox = rc.get("proximity")
+        prox_ok = isinstance(prox, (int, float)) and 0 <= prox <= 1
+        checks.append({
+            "check": "proximity_bounded",
+            "passed": prox_ok,
+            "detail": (
+                f"proximity={prox}"
+                if prox is not None else "proximity=MISSING"
+            ),
+        })
+
+        # Sub-check 7: decision valid enum (optional but checked if present)
+        dec = rc.get("decision")
+        dec_ok = dec is None or (isinstance(dec, str) and dec in self.VALID_DECISIONS)
+        checks.append({
+            "check": "decision_valid",
+            "passed": dec_ok,
+            "detail": (
+                f"decision='{dec}' ({'valid' if dec_ok else 'INVALID'})"
+                if dec is not None else "decision=absent (optional, OK)"
+            ),
+        })
+
+        all_passed = all(c["passed"] for c in checks)
+        return {"passed": all_passed, "checks": checks}
+
+
+class ExtraFieldsPresent(MismatchChecker):
+    """Checks that signal objects contain no extra fields beyond schema properties."""
+
+    mismatch_id = "extra_fields_present"
+    field_name = "additionalProperties"
+    severity = "ADDITIONAL_PROPERTIES_VIOLATION"
+    schema_reference = "producer_signal_schema.json#/$defs/signal/additionalProperties"
+    description = (
+        "The schema sets additionalProperties: false on the signal object. "
+        "Only fields defined in the schema's properties are permitted: "
+        "signal_id, producer_id, timestamp, symbol, direction, confidence, "
+        "horizon_hours, action, schema_version, regime_context, "
+        "attribution_hash, calibration, weak_symbol, metadata. "
+        "Producer-specific extension fields must go inside the 'metadata' "
+        "object (which allows additionalProperties: true)."
+    )
+    remediation = (
+        "Move non-schema fields (signal_type, expected_karma, voi_included, "
+        "voi_suppressed, duration_gated, weak_symbol_inverted, "
+        "policy_gates_applied) into the 'metadata' object. Also move flat "
+        "regime fields (regime, regime_confidence, regime_duration_days, "
+        "proximity) into regime_context. The metadata object is designed "
+        "as the catch-all for producer-specific data."
+    )
+
+    ALLOWED_FIELDS = {
+        "signal_id", "producer_id", "timestamp", "symbol", "direction",
+        "confidence", "horizon_hours", "action", "schema_version",
+        "regime_context", "attribution_hash", "calibration", "weak_symbol",
+        "metadata",
+    }
+
+    def check_signal(self, signal: dict, schema_reqs: dict) -> dict:
+        checks = []
+        sig_keys = set(signal.keys())
+        extras = sig_keys - self.ALLOWED_FIELDS
+
+        # Sub-check 1: no extra top-level fields
+        no_extras = len(extras) == 0
+        checks.append({
+            "check": "no_extra_top_level_fields",
+            "passed": no_extras,
+            "detail": (
+                "all fields conform to schema properties"
+                if no_extras
+                else f"extra fields found: {sorted(extras)}"
+            ),
+        })
+
+        # Sub-check 2: metadata is object if present
+        meta = signal.get("metadata")
+        meta_ok = meta is None or isinstance(meta, dict)
+        checks.append({
+            "check": "metadata_is_object",
+            "passed": meta_ok,
+            "detail": (
+                f"metadata type={type(meta).__name__}"
+                if meta is not None else "metadata=absent (optional, OK)"
+            ),
+        })
+
+        # Sub-check 3: known extension fields are in metadata (not top-level)
+        extension_fields = {
+            "signal_type", "expected_karma", "voi_included",
+            "voi_suppressed", "duration_gated", "weak_symbol_inverted",
+            "policy_gates_applied",
+        }
+        misplaced = extension_fields & sig_keys
+        placement_ok = len(misplaced) == 0
+        checks.append({
+            "check": "extension_fields_in_metadata",
+            "passed": placement_ok,
+            "detail": (
+                "all extension fields properly in metadata (or absent)"
+                if placement_ok
+                else f"extension fields at top level: {sorted(misplaced)}"
+            ),
+        })
+
+        # Sub-check 4: flat regime fields not at top level
+        regime_flat = {"regime", "regime_confidence", "regime_duration_days", "proximity"}
+        regime_misplaced = regime_flat & sig_keys
+        regime_ok = len(regime_misplaced) == 0
+        checks.append({
+            "check": "regime_fields_not_flat",
+            "passed": regime_ok,
+            "detail": (
+                "no flat regime fields at top level"
+                if regime_ok
+                else f"regime fields at top level: {sorted(regime_misplaced)}"
+            ),
+        })
+
+        # Sub-check 5: field count reasonable (schema has 14 defined properties)
+        count_ok = len(sig_keys) <= 14
+        checks.append({
+            "check": "field_count_bounded",
+            "passed": count_ok,
+            "detail": f"field_count={len(sig_keys)} (max=14 schema properties)",
+        })
+
+        all_passed = all(c["passed"] for c in checks)
+        return {"passed": all_passed, "checks": checks}
+
+
 # Registry of known mismatches
 MISMATCH_REGISTRY = {
     "action_field_missing": ActionFieldMissing,
     "required_fields_missing": RequiredFieldsMissing,
     "direction_enum_invalid": DirectionEnumInvalid,
+    "regime_context_flat": RegimeContextFlat,
+    "extra_fields_present": ExtraFieldsPresent,
 }
 
 
@@ -652,6 +893,51 @@ class ConformanceReceiptBuilder:
                 "code_after": (
                     "const dl = dir > 0 ? 'bullish' : "
                     "(dir < 0 ? 'bearish' : 'bearish');"
+                ),
+                "signals_affected": "all (BTC, ETH, SOL, LINK)",
+            },
+            "regime_context_flat": {
+                "file_patched": "signal_api.js",
+                "lines": "94-107",
+                "change_type": "STRUCTURAL_REFACTOR",
+                "description": (
+                    "Replaced flat regime fields (regime, regime_confidence, "
+                    "regime_duration_days, proximity) with a nested regime_context "
+                    "object matching the schema definition. Added decision field "
+                    "derived from regime policy (SUPPRESS_DIRECTION → NO_TRADE, "
+                    "PUBLISH → EXECUTE). Ensured duration_days is integer via "
+                    "Math.floor()."
+                ),
+                "code_before": (
+                    "regime, regime_confidence: regimeConf, "
+                    "regime_duration_days: dur, proximity: prox,"
+                ),
+                "code_after": (
+                    "regime_context: { regime_id: regime, "
+                    "regime_confidence: regimeConf, proximity: prox, "
+                    "duration_days: Math.floor(dur), decision: regimeDecision },"
+                ),
+                "signals_affected": "all (BTC, ETH, SOL, LINK)",
+            },
+            "extra_fields_present": {
+                "file_patched": "signal_api.js",
+                "lines": "94-117",
+                "change_type": "FIELD_RELOCATION",
+                "description": (
+                    "Moved 7 producer-specific extension fields from signal "
+                    "top-level into the metadata object (which permits "
+                    "additionalProperties). Fields moved: signal_type, "
+                    "expected_karma, voi_included, voi_suppressed, "
+                    "duration_gated, weak_symbol_inverted, "
+                    "policy_gates_applied. Also added attribution_hash for "
+                    "tamper detection (SHA-256 of signal_id|symbol|direction|"
+                    "confidence|horizon_hours|timestamp)."
+                ),
+                "code_after": (
+                    "metadata: { signal_type: st, expected_karma: ..., "
+                    "voi_included: ..., voi_suppressed: ..., "
+                    "duration_gated: ..., weak_symbol_inverted: ..., "
+                    "policy_gates_applied: {...} }"
                 ),
                 "signals_affected": "all (BTC, ETH, SOL, LINK)",
             },

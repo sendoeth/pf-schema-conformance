@@ -1,0 +1,158 @@
+{
+  "receipt_id": "SCR-81ff64416885",
+  "schema_version": "1.0.0",
+  "generator_version": "1.0.0",
+  "generated_at": "2026-05-20T11:54:26.315Z",
+  "producer_id": "post-fiat-signals",
+  "endpoint": "http://localhost:8080/signals/latest",
+  "canonical_schema": {
+    "name": "producer_signal_schema.json",
+    "version": "https://postfiat.org/schemas/producer-signal/v1.0.0",
+    "content_hash": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1"
+  },
+  "mismatch": {
+    "mismatch_id": "extra_fields_present",
+    "field": "additionalProperties",
+    "description": "The schema sets additionalProperties: false on the signal object. Only fields defined in the schema's properties are permitted: signal_id, producer_id, timestamp, symbol, direction, confidence, horizon_hours, action, schema_version, regime_context, attribution_hash, calibration, weak_symbol, metadata. Producer-specific extension fields must go inside the 'metadata' object (which allows additionalProperties: true).",
+    "remediation_applied": "Move non-schema fields (signal_type, expected_karma, voi_included, voi_suppressed, duration_gated, weak_symbol_inverted, policy_gates_applied) into the 'metadata' object. Also move flat regime fields (regime, regime_confidence, regime_duration_days, proximity) into regime_context. The metadata object is designed as the catch-all for producer-specific data.",
+    "severity": "ADDITIONAL_PROPERTIES_VIOLATION",
+    "schema_reference": "producer_signal_schema.json#/$defs/signal/additionalProperties"
+  },
+  "patch": {
+    "file_patched": "signal_api.js",
+    "lines": "94-117",
+    "change_type": "FIELD_RELOCATION",
+    "description": "Moved 7 producer-specific extension fields from signal top-level into the metadata object (which permits additionalProperties). Fields moved: signal_type, expected_karma, voi_included, voi_suppressed, duration_gated, weak_symbol_inverted, policy_gates_applied. Also added attribution_hash for tamper detection (SHA-256 of signal_id|symbol|direction|confidence|horizon_hours|timestamp).",
+    "code_after": "metadata: { signal_type: st, expected_karma: ..., voi_included: ..., voi_suppressed: ..., duration_gated: ..., weak_symbol_inverted: ..., policy_gates_applied: {...} }",
+    "signals_affected": "all (BTC, ETH, SOL, LINK)"
+  },
+  "before": {
+    "snapshot_path": "snapshots/before_mismatch4_5.json",
+    "snapshot_hash": "573e18304fe101a7165d8f22970553aa5dab37b4c079dc1d937eb5344cf8b11d",
+    "captured_at": "2026-05-20T11:49:07.815Z",
+    "result": {
+      "verdict": "FAIL",
+      "signals_checked": 4,
+      "signals_passed": 0,
+      "signals_failed": 4,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779277747815",
+          "symbol": "BTC",
+          "passed": false,
+          "detail": "extra fields found: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'proximity', 'regime', 'regime_confidence', 'regime_duration_days', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; extension fields at top level: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; regime fields at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; field_count=20 (max=14 schema properties)"
+        },
+        {
+          "signal_id": "pf-ETH-1779277747815",
+          "symbol": "ETH",
+          "passed": false,
+          "detail": "extra fields found: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'proximity', 'regime', 'regime_confidence', 'regime_duration_days', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; extension fields at top level: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; regime fields at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; field_count=20 (max=14 schema properties)"
+        },
+        {
+          "signal_id": "pf-SOL-1779277747815",
+          "symbol": "SOL",
+          "passed": false,
+          "detail": "extra fields found: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'proximity', 'regime', 'regime_confidence', 'regime_duration_days', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; extension fields at top level: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; regime fields at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; field_count=21 (max=14 schema properties)"
+        },
+        {
+          "signal_id": "pf-LINK-1779277747815",
+          "symbol": "LINK",
+          "passed": false,
+          "detail": "extra fields found: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'proximity', 'regime', 'regime_confidence', 'regime_duration_days', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; extension fields at top level: ['duration_gated', 'expected_karma', 'policy_gates_applied', 'signal_type', 'voi_included', 'voi_suppressed', 'weak_symbol_inverted']; regime fields at top level: ['proximity', 'regime', 'regime_confidence', 'regime_duration_days']; field_count=20 (max=14 schema properties)"
+        }
+      ]
+    }
+  },
+  "after": {
+    "endpoint": "http://localhost:8080/signals/latest",
+    "snapshot_hash": "4d9bee7b51ee8c8c29b11203bc4cb9db374d803d2f4140591639a58998545c96",
+    "captured_at": "2026-05-20T11:54:26.338Z",
+    "result": {
+      "verdict": "PASS",
+      "signals_checked": 4,
+      "signals_passed": 4,
+      "signals_failed": 0,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779278066338",
+          "symbol": "BTC",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-ETH-1779278066338",
+          "symbol": "ETH",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-SOL-1779278066338",
+          "symbol": "SOL",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-LINK-1779278066338",
+          "symbol": "LINK",
+          "passed": true,
+          "detail": "all checks passed"
+        }
+      ]
+    }
+  },
+  "conformance_summary": {
+    "final_verdict": "PASS",
+    "status_change": "FIXED",
+    "before_verdict": "FAIL",
+    "after_verdict": "PASS",
+    "field_checked": "additionalProperties",
+    "before_signals_passing": 0,
+    "after_signals_passing": 4,
+    "total_signals_checked": 4
+  },
+  "conformance_command": "python3 check_conformance.py --endpoint http://localhost:8080/signals/latest --schema producer_signal_schema.json --mismatch extra_fields_present --before-snapshot snapshots/before_mismatch4_5.json -o conformance_receipt.json --summary",
+  "source_hashes": {
+    "schema": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1",
+    "before_snapshot": "573e18304fe101a7165d8f22970553aa5dab37b4c079dc1d937eb5344cf8b11d",
+    "after_snapshot": "4d9bee7b51ee8c8c29b11203bc4cb9db374d803d2f4140591639a58998545c96"
+  },
+  "limitations": [
+    {
+      "id": "L01",
+      "description": "Before snapshot is stored, not captured live in same session",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L02",
+      "description": "Conformance checks single mismatch, not full schema validation",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "MODERATE"
+    },
+    {
+      "id": "L03",
+      "description": "Point-in-time check; future code changes could regress",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L04",
+      "description": "Policy consistency check infers expected action from gate flags, not from source logic",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L05",
+      "description": "INVERT conditional check (weak_symbol metadata) not fully testable under SYSTEMIC regime",
+      "bias_direction": "UNDERSTATED_RISK",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L06",
+      "description": "After snapshot fetched at check time; signals may differ from moment of patch verification",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    }
+  ],
+  "content_hash": "7174b6c553beaae7bb9862f78bf38fc7e6fb7682b50d6319f75e5891c69d5692"
+}

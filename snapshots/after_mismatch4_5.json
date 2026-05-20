@@ -1,0 +1,182 @@
+{
+  "schema": "pf-sovereign-signals/v1",
+  "producer_id": "post-fiat-signals",
+  "source_wallet": "rfLJ4ZRnqmGFLAcMvCD56nKGbjpdTJmMqo",
+  "generated_at": "2026-05-20T11:52:56.359Z",
+  "regime": {
+    "state": "SYSTEMIC",
+    "confidence": 77,
+    "duration_days": 75,
+    "proximity": 0.012,
+    "regime_policy": "SUPPRESS_DIRECTION"
+  },
+  "signals": {
+    "published": [
+      {
+        "signal_id": "pf-BTC-1779277976359",
+        "producer_id": "post-fiat-signals",
+        "schema_version": "1.1.0",
+        "symbol": "BTC",
+        "direction": "bullish",
+        "confidence": 0.51,
+        "horizon_hours": 24,
+        "action": "WITHHOLD",
+        "regime_context": {
+          "regime_id": "SYSTEMIC",
+          "regime_confidence": 77,
+          "proximity": 0.012,
+          "duration_days": 75,
+          "decision": "NO_TRADE"
+        },
+        "timestamp": "2026-05-20T11:52:56.359Z",
+        "metadata": {
+          "signal_type": "TRANSITION_TIMING",
+          "expected_karma": 0.02,
+          "voi_included": true,
+          "voi_suppressed": false,
+          "duration_gated": false,
+          "weak_symbol_inverted": false,
+          "policy_gates_applied": {
+            "weak_symbol": false,
+            "duration_gate": false,
+            "voi_filter": false,
+            "regime_filter": true
+          }
+        },
+        "attribution_hash": "2fabad1ae3d6f1afe88860aaebeddd17f009a6d38e5c0fba1536d59fa707ec3b"
+      },
+      {
+        "signal_id": "pf-ETH-1779277976359",
+        "producer_id": "post-fiat-signals",
+        "schema_version": "1.1.0",
+        "symbol": "ETH",
+        "direction": "bullish",
+        "confidence": 0.52,
+        "horizon_hours": 24,
+        "action": "WITHHOLD",
+        "regime_context": {
+          "regime_id": "SYSTEMIC",
+          "regime_confidence": 77,
+          "proximity": 0.012,
+          "duration_days": 75,
+          "decision": "NO_TRADE"
+        },
+        "timestamp": "2026-05-20T11:52:56.359Z",
+        "metadata": {
+          "signal_type": "TRANSITION_TIMING",
+          "expected_karma": 0.04,
+          "voi_included": true,
+          "voi_suppressed": false,
+          "duration_gated": false,
+          "weak_symbol_inverted": false,
+          "policy_gates_applied": {
+            "weak_symbol": false,
+            "duration_gate": false,
+            "voi_filter": false,
+            "regime_filter": true
+          }
+        },
+        "attribution_hash": "bb6e3fa53dbe9631356d5845d1bdd3c7e57cfb045decea5bcbb66664432c823b"
+      },
+      {
+        "signal_id": "pf-SOL-1779277976359",
+        "producer_id": "post-fiat-signals",
+        "schema_version": "1.1.0",
+        "symbol": "SOL",
+        "direction": "bearish",
+        "confidence": 0.56,
+        "horizon_hours": 24,
+        "action": "INVERT",
+        "regime_context": {
+          "regime_id": "SYSTEMIC",
+          "regime_confidence": 77,
+          "proximity": 0.012,
+          "duration_days": 75,
+          "decision": "NO_TRADE"
+        },
+        "timestamp": "2026-05-20T11:52:56.359Z",
+        "metadata": {
+          "signal_type": "TRANSITION_TIMING",
+          "expected_karma": 0.12,
+          "voi_included": true,
+          "voi_suppressed": false,
+          "duration_gated": false,
+          "weak_symbol_inverted": true,
+          "policy_gates_applied": {
+            "weak_symbol": true,
+            "duration_gate": false,
+            "voi_filter": false,
+            "regime_filter": true
+          }
+        },
+        "attribution_hash": "0efb244a8fa86daadcbbe3831f6ddd2cb61018f61a4a01d1cbda9a1d405f4cd5",
+        "weak_symbol": {
+          "weakness_score": 0.56,
+          "severity": "MODERATE",
+          "original_direction": "bullish",
+          "inversion_p_value": 0.0039
+        }
+      },
+      {
+        "signal_id": "pf-LINK-1779277976359",
+        "producer_id": "post-fiat-signals",
+        "schema_version": "1.1.0",
+        "symbol": "LINK",
+        "direction": "bullish",
+        "confidence": 0.53,
+        "horizon_hours": 24,
+        "action": "WITHHOLD",
+        "regime_context": {
+          "regime_id": "SYSTEMIC",
+          "regime_confidence": 77,
+          "proximity": 0.012,
+          "duration_days": 75,
+          "decision": "NO_TRADE"
+        },
+        "timestamp": "2026-05-20T11:52:56.359Z",
+        "metadata": {
+          "signal_type": "TRANSITION_TIMING",
+          "expected_karma": 0.06,
+          "voi_included": true,
+          "voi_suppressed": false,
+          "duration_gated": false,
+          "weak_symbol_inverted": false,
+          "policy_gates_applied": {
+            "weak_symbol": false,
+            "duration_gate": false,
+            "voi_filter": false,
+            "regime_filter": true
+          }
+        },
+        "attribution_hash": "8799e86c1e8cc342f1a0335c41030c83a61535f00f162e6a491ee00a9a89bf4f"
+      }
+    ],
+    "suppressed": [],
+    "total_generated": 4,
+    "total_published": 4,
+    "total_suppressed": 0
+  },
+  "policy_summary": {
+    "weak_symbol_inversions": [
+      {
+        "symbol": "SOL",
+        "original": 1,
+        "inverted": -1,
+        "reason": "accuracy 44.0% → 56.0% inverted (p=0.0039)"
+      }
+    ],
+    "duration_gated_signals": 0,
+    "voi_suppressions": 0,
+    "regime_filter": "SUPPRESS_DIRECTION"
+  },
+  "metadata": {
+    "api_source": "localhost:8080",
+    "api_reachable": true,
+    "oracle_dependency": null,
+    "legacy_oracle_removed": true,
+    "self_hosted": true,
+    "horizon_hours": 24,
+    "server_uptime_sec": 54
+  },
+  "content_hash": "2cacc97d91b3f53d42bc9eb050c59b52dbbc4e1d9dde635dbeb6745e9ede832b"
+}

@@ -1,0 +1,158 @@
+{
+  "receipt_id": "SCR-0981008478dd",
+  "schema_version": "1.0.0",
+  "generator_version": "1.0.0",
+  "generated_at": "2026-05-20T11:43:27.564Z",
+  "producer_id": "post-fiat-signals",
+  "endpoint": "http://localhost:8080/signals/latest",
+  "canonical_schema": {
+    "name": "producer_signal_schema.json",
+    "version": "https://postfiat.org/schemas/producer-signal/v1.0.0",
+    "content_hash": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1"
+  },
+  "mismatch": {
+    "mismatch_id": "required_fields_missing",
+    "field": "producer_id, schema_version",
+    "description": "The 'producer_id' and 'schema_version' fields are required by producer_signal_schema.json v1.0.0 (lines 138-147). 'producer_id' identifies the signal producer; 'schema_version' declares which schema version the signal conforms to.",
+    "remediation_applied": "Add 'producer_id' and 'schema_version' to every emitted signal object. Use the existing PRODUCER_ID and SCHEMA_VERSION constants from signal_api.js.",
+    "severity": "REQUIRED_FIELD_MISSING",
+    "schema_reference": "producer_signal_schema.json#/$defs/signal/required"
+  },
+  "patch": {
+    "file_patched": "signal_api.js",
+    "line": 95,
+    "change_type": "FIELD_ADDITION",
+    "description": "Added 'producer_id: PRODUCER_ID' and 'schema_version: SCHEMA_VERSION' to the sigObj construction in generateSovereignSignals(). Constants PRODUCER_ID='post-fiat-signals' and SCHEMA_VERSION='1.1.0' already existed at module scope but were not injected into individual signal objects.",
+    "code_added": "producer_id: PRODUCER_ID, schema_version: SCHEMA_VERSION,",
+    "signals_affected": "all (BTC, ETH, SOL, LINK)"
+  },
+  "before": {
+    "snapshot_path": "snapshots/before_mismatch2_3.json",
+    "snapshot_hash": "c83cd1e6bd918fb76043398b6f274a7be565a9ee63a4e3af63604840bf9869e6",
+    "captured_at": "2026-05-20T11:40:53.089Z",
+    "result": {
+      "verdict": "FAIL",
+      "signals_checked": 4,
+      "signals_passed": 0,
+      "signals_failed": 4,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779277253089",
+          "symbol": "BTC",
+          "passed": false,
+          "detail": "producer_id=MISSING; N/A (field missing); schema_version=MISSING; N/A (field missing)"
+        },
+        {
+          "signal_id": "pf-ETH-1779277253089",
+          "symbol": "ETH",
+          "passed": false,
+          "detail": "producer_id=MISSING; N/A (field missing); schema_version=MISSING; N/A (field missing)"
+        },
+        {
+          "signal_id": "pf-SOL-1779277253089",
+          "symbol": "SOL",
+          "passed": false,
+          "detail": "producer_id=MISSING; N/A (field missing); schema_version=MISSING; N/A (field missing)"
+        },
+        {
+          "signal_id": "pf-LINK-1779277253089",
+          "symbol": "LINK",
+          "passed": false,
+          "detail": "producer_id=MISSING; N/A (field missing); schema_version=MISSING; N/A (field missing)"
+        }
+      ]
+    }
+  },
+  "after": {
+    "endpoint": "http://localhost:8080/signals/latest",
+    "snapshot_hash": "f540752d3ce133988feaa550b514c2f8ac11ae061e8adc2e6dd9b3f6eca9a390",
+    "captured_at": "2026-05-20T11:43:27.586Z",
+    "result": {
+      "verdict": "PASS",
+      "signals_checked": 4,
+      "signals_passed": 4,
+      "signals_failed": 0,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779277407586",
+          "symbol": "BTC",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-ETH-1779277407586",
+          "symbol": "ETH",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-SOL-1779277407587",
+          "symbol": "SOL",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-LINK-1779277407587",
+          "symbol": "LINK",
+          "passed": true,
+          "detail": "all checks passed"
+        }
+      ]
+    }
+  },
+  "conformance_summary": {
+    "final_verdict": "PASS",
+    "status_change": "FIXED",
+    "before_verdict": "FAIL",
+    "after_verdict": "PASS",
+    "field_checked": "producer_id, schema_version",
+    "before_signals_passing": 0,
+    "after_signals_passing": 4,
+    "total_signals_checked": 4
+  },
+  "conformance_command": "python3 check_conformance.py --endpoint http://localhost:8080/signals/latest --schema producer_signal_schema.json --mismatch required_fields_missing --before-snapshot snapshots/before_mismatch2_3.json -o conformance_receipt.json --summary",
+  "source_hashes": {
+    "schema": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1",
+    "before_snapshot": "c83cd1e6bd918fb76043398b6f274a7be565a9ee63a4e3af63604840bf9869e6",
+    "after_snapshot": "f540752d3ce133988feaa550b514c2f8ac11ae061e8adc2e6dd9b3f6eca9a390"
+  },
+  "limitations": [
+    {
+      "id": "L01",
+      "description": "Before snapshot is stored, not captured live in same session",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L02",
+      "description": "Conformance checks single mismatch, not full schema validation",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "MODERATE"
+    },
+    {
+      "id": "L03",
+      "description": "Point-in-time check; future code changes could regress",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L04",
+      "description": "Policy consistency check infers expected action from gate flags, not from source logic",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L05",
+      "description": "INVERT conditional check (weak_symbol metadata) not fully testable under SYSTEMIC regime",
+      "bias_direction": "UNDERSTATED_RISK",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L06",
+      "description": "After snapshot fetched at check time; signals may differ from moment of patch verification",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    }
+  ],
+  "content_hash": "715367c01b0dd562898c72a6232516bf95f11ae7808c46dd1280dbfd197188df"
+}

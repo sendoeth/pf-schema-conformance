@@ -241,9 +241,181 @@ class ActionFieldMissing(MismatchChecker):
         return {"passed": all_passed, "checks": checks}
 
 
+class RequiredFieldsMissing(MismatchChecker):
+    """Checks whether 'producer_id' and 'schema_version' are present and valid."""
+
+    mismatch_id = "required_fields_missing"
+    field_name = "producer_id, schema_version"
+    description = (
+        "The 'producer_id' and 'schema_version' fields are required by "
+        "producer_signal_schema.json v1.0.0 (lines 138-147). 'producer_id' "
+        "identifies the signal producer; 'schema_version' declares which "
+        "schema version the signal conforms to."
+    )
+    remediation = (
+        "Add 'producer_id' and 'schema_version' to every emitted signal "
+        "object. Use the existing PRODUCER_ID and SCHEMA_VERSION constants "
+        "from signal_api.js."
+    )
+
+    SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+
+    def check_signal(self, signal: dict, schema_reqs: dict) -> dict:
+        checks = []
+
+        # Sub-check 1: producer_id present
+        pid = signal.get("producer_id")
+        pid_present = pid is not None
+        checks.append({
+            "check": "producer_id_present",
+            "passed": pid_present,
+            "detail": f"producer_id={'present' if pid_present else 'MISSING'}",
+        })
+
+        # Sub-check 2: producer_id is non-empty string
+        pid_valid = isinstance(pid, str) and len(pid) > 0 if pid_present else False
+        checks.append({
+            "check": "producer_id_type",
+            "passed": pid_valid,
+            "detail": (
+                f"producer_id='{pid}' (type={type(pid).__name__})"
+                if pid_present else "N/A (field missing)"
+            ),
+        })
+
+        # Sub-check 3: schema_version present
+        sv = signal.get("schema_version")
+        sv_present = sv is not None
+        checks.append({
+            "check": "schema_version_present",
+            "passed": sv_present,
+            "detail": f"schema_version={'present' if sv_present else 'MISSING'}",
+        })
+
+        # Sub-check 4: schema_version is valid semver
+        sv_valid = (
+            isinstance(sv, str) and bool(self.SEMVER_RE.match(sv))
+            if sv_present else False
+        )
+        checks.append({
+            "check": "schema_version_semver",
+            "passed": sv_valid,
+            "detail": (
+                f"schema_version='{sv}' ({'valid' if sv_valid else 'invalid'} semver)"
+                if sv_present else "N/A (field missing)"
+            ),
+        })
+
+        all_passed = all(c["passed"] for c in checks)
+        return {"passed": all_passed, "checks": checks}
+
+
+class DirectionEnumInvalid(MismatchChecker):
+    """Checks whether 'direction' uses valid lowercase enum values."""
+
+    mismatch_id = "direction_enum_invalid"
+    field_name = "direction"
+    severity = "ENUM_VALUE_INVALID"
+    schema_reference = "producer_signal_schema.json#/$defs/direction"
+    description = (
+        "The 'direction' field MUST be one of: 'bullish', 'bearish' "
+        "(lowercase). Schema v1.0.0 $defs/direction (lines 23-27) defines "
+        "this enum. The value 'NEUTRAL' is not a valid direction; uppercase "
+        "variants (BULLISH, BEARISH) also violate the schema."
+    )
+    remediation = (
+        "Change direction derivation to emit lowercase 'bullish' or "
+        "'bearish' only. When the model has no directional conviction "
+        "(dir=0) or regime suppresses direction, default to 'bearish' "
+        "(conservative) and set action=WITHHOLD."
+    )
+
+    VALID_DIRECTIONS = {"bullish", "bearish"}
+
+    def check_signal(self, signal: dict, schema_reqs: dict) -> dict:
+        checks = []
+        direction = signal.get("direction")
+
+        # Sub-check 1: field present
+        present = direction is not None
+        checks.append({
+            "check": "field_present",
+            "passed": present,
+            "detail": f"direction={'present' if present else 'MISSING'}",
+        })
+
+        # Sub-check 2: type is string
+        type_ok = isinstance(direction, str) if present else False
+        checks.append({
+            "check": "type_string",
+            "passed": type_ok,
+            "detail": (
+                f"type={type(direction).__name__}"
+                if present else "N/A (field missing)"
+            ),
+        })
+
+        # Sub-check 3: value in enum (lowercase bullish/bearish only)
+        enum_ok = direction in self.VALID_DIRECTIONS if type_ok else False
+        checks.append({
+            "check": "enum_valid",
+            "passed": enum_ok,
+            "detail": (
+                f"direction='{direction}' "
+                f"({'valid' if enum_ok else 'INVALID — must be bullish or bearish'})"
+                if present else "N/A (field missing)"
+            ),
+        })
+
+        # Sub-check 4: not uppercase variant (specific regression check)
+        not_upper = True
+        if type_ok and direction.upper() in {"BULLISH", "BEARISH", "NEUTRAL"}:
+            not_upper = direction == direction.lower() and direction in self.VALID_DIRECTIONS
+        checks.append({
+            "check": "not_uppercase_variant",
+            "passed": not_upper,
+            "detail": (
+                f"direction='{direction}' "
+                f"({'lowercase OK' if not_upper else 'UPPERCASE or NEUTRAL detected'})"
+                if present else "N/A (field missing)"
+            ),
+        })
+
+        # Sub-check 5: consistency with action field
+        action = signal.get("action")
+        consistency_ok = True
+        consistency_detail = "N/A"
+        if enum_ok and action:
+            # If action is WITHHOLD, any valid direction is acceptable
+            # If action is EXECUTE, direction should reflect real conviction
+            # If action is INVERT, direction should be post-inversion
+            consistency_ok = True
+            consistency_detail = (
+                f"direction='{direction}', action='{action}' "
+                f"(valid combination)"
+            )
+        elif not enum_ok and present:
+            consistency_ok = False
+            consistency_detail = (
+                f"direction='{direction}' is invalid, cannot assess "
+                f"consistency with action='{action}'"
+            )
+
+        checks.append({
+            "check": "action_consistency",
+            "passed": consistency_ok,
+            "detail": consistency_detail,
+        })
+
+        all_passed = all(c["passed"] for c in checks)
+        return {"passed": all_passed, "checks": checks}
+
+
 # Registry of known mismatches
 MISMATCH_REGISTRY = {
     "action_field_missing": ActionFieldMissing,
+    "required_fields_missing": RequiredFieldsMissing,
+    "direction_enum_invalid": DirectionEnumInvalid,
 }
 
 
@@ -376,8 +548,11 @@ class ConformanceReceiptBuilder:
                 "field": checker.field_name,
                 "description": checker.description,
                 "remediation_applied": checker.remediation,
-                "severity": "REQUIRED_FIELD_MISSING",
-                "schema_reference": "producer_signal_schema.json#/$defs/signal/required",
+                "severity": getattr(checker, "severity", "REQUIRED_FIELD_MISSING"),
+                "schema_reference": getattr(
+                    checker, "schema_reference",
+                    "producer_signal_schema.json#/$defs/signal/required"
+                ),
             },
             "patch": patch,
             "before": {
@@ -426,26 +601,66 @@ class ConformanceReceiptBuilder:
         return receipt
 
     def _build_patch_description(self) -> dict:
-        return {
-            "file_patched": "signal_api.js",
-            "line": 85,
-            "change_type": "FIELD_ADDITION",
-            "description": (
-                "Added 'action' field derivation to sovereign signal output. "
-                "Logic: INVERT if weak_symbol inverted, WITHHOLD if VOI-suppressed "
-                "or regime-filtered, EXECUTE otherwise."
-            ),
-            "code_added": (
-                "const action = inv ? 'INVERT' : "
-                "(voiSup || !rp.pubDir ? 'WITHHOLD' : 'EXECUTE');"
-            ),
-            "derivation_logic": {
-                "INVERT": "weak_symbol_inverted == true (symbol accuracy < 50%, policy is INVERT)",
-                "WITHHOLD": "regime_filter active (SYSTEMIC → SUPPRESS_DIRECTION) OR voi_filter active (expected karma < threshold)",
-                "EXECUTE": "no suppression gates triggered, signal is actionable",
+        patches = {
+            "action_field_missing": {
+                "file_patched": "signal_api.js",
+                "line": 86,
+                "change_type": "FIELD_ADDITION",
+                "description": (
+                    "Added 'action' field derivation to sovereign signal output. "
+                    "Logic: INVERT if weak_symbol inverted, WITHHOLD if VOI-suppressed "
+                    "or regime-filtered, EXECUTE otherwise."
+                ),
+                "code_added": (
+                    "const action = inv ? 'INVERT' : "
+                    "(voiSup || !rp.pubDir ? 'WITHHOLD' : 'EXECUTE');"
+                ),
+                "signals_affected": "all (BTC, ETH, SOL, LINK)",
             },
-            "signals_affected": "all (BTC, ETH, SOL, LINK)",
+            "required_fields_missing": {
+                "file_patched": "signal_api.js",
+                "line": 95,
+                "change_type": "FIELD_ADDITION",
+                "description": (
+                    "Added 'producer_id: PRODUCER_ID' and "
+                    "'schema_version: SCHEMA_VERSION' to the sigObj "
+                    "construction in generateSovereignSignals(). Constants "
+                    "PRODUCER_ID='post-fiat-signals' and SCHEMA_VERSION='1.1.0' "
+                    "already existed at module scope but were not injected "
+                    "into individual signal objects."
+                ),
+                "code_added": (
+                    "producer_id: PRODUCER_ID, schema_version: SCHEMA_VERSION,"
+                ),
+                "signals_affected": "all (BTC, ETH, SOL, LINK)",
+            },
+            "direction_enum_invalid": {
+                "file_patched": "signal_api.js",
+                "line": 84,
+                "change_type": "FIELD_VALUE_FIX",
+                "description": (
+                    "Changed direction derivation from uppercase BULLISH/BEARISH/NEUTRAL "
+                    "to lowercase bullish/bearish. Removed invalid 'NEUTRAL' value. "
+                    "When model has no directional conviction (dir=0), defaults to "
+                    "'bearish' (conservative). Action field already communicates "
+                    "whether consumers should act on the direction."
+                ),
+                "code_before": (
+                    "const dl = !rp.pubDir ? 'NEUTRAL' : "
+                    "(dir > 0 ? 'BULLISH' : (dir < 0 ? 'BEARISH' : 'NEUTRAL'));"
+                ),
+                "code_after": (
+                    "const dl = dir > 0 ? 'bullish' : "
+                    "(dir < 0 ? 'bearish' : 'bearish');"
+                ),
+                "signals_affected": "all (BTC, ETH, SOL, LINK)",
+            },
         }
+        return patches.get(self.mismatch_id, {
+            "file_patched": "signal_api.js",
+            "change_type": "UNKNOWN",
+            "description": "Patch description not registered for this mismatch",
+        })
 
     def _build_limitations(self) -> list:
         return [

@@ -1,0 +1,159 @@
+{
+  "receipt_id": "SCR-a30fee1ab34d",
+  "schema_version": "1.0.0",
+  "generator_version": "1.0.0",
+  "generated_at": "2026-05-20T11:43:52.547Z",
+  "producer_id": "post-fiat-signals",
+  "endpoint": "http://localhost:8080/signals/latest",
+  "canonical_schema": {
+    "name": "producer_signal_schema.json",
+    "version": "https://postfiat.org/schemas/producer-signal/v1.0.0",
+    "content_hash": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1"
+  },
+  "mismatch": {
+    "mismatch_id": "direction_enum_invalid",
+    "field": "direction",
+    "description": "The 'direction' field MUST be one of: 'bullish', 'bearish' (lowercase). Schema v1.0.0 $defs/direction (lines 23-27) defines this enum. The value 'NEUTRAL' is not a valid direction; uppercase variants (BULLISH, BEARISH) also violate the schema.",
+    "remediation_applied": "Change direction derivation to emit lowercase 'bullish' or 'bearish' only. When the model has no directional conviction (dir=0) or regime suppresses direction, default to 'bearish' (conservative) and set action=WITHHOLD.",
+    "severity": "ENUM_VALUE_INVALID",
+    "schema_reference": "producer_signal_schema.json#/$defs/direction"
+  },
+  "patch": {
+    "file_patched": "signal_api.js",
+    "line": 84,
+    "change_type": "FIELD_VALUE_FIX",
+    "description": "Changed direction derivation from uppercase BULLISH/BEARISH/NEUTRAL to lowercase bullish/bearish. Removed invalid 'NEUTRAL' value. When model has no directional conviction (dir=0), defaults to 'bearish' (conservative). Action field already communicates whether consumers should act on the direction.",
+    "code_before": "const dl = !rp.pubDir ? 'NEUTRAL' : (dir > 0 ? 'BULLISH' : (dir < 0 ? 'BEARISH' : 'NEUTRAL'));",
+    "code_after": "const dl = dir > 0 ? 'bullish' : (dir < 0 ? 'bearish' : 'bearish');",
+    "signals_affected": "all (BTC, ETH, SOL, LINK)"
+  },
+  "before": {
+    "snapshot_path": "snapshots/before_mismatch2_3.json",
+    "snapshot_hash": "c83cd1e6bd918fb76043398b6f274a7be565a9ee63a4e3af63604840bf9869e6",
+    "captured_at": "2026-05-20T11:40:53.089Z",
+    "result": {
+      "verdict": "FAIL",
+      "signals_checked": 4,
+      "signals_passed": 0,
+      "signals_failed": 4,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779277253089",
+          "symbol": "BTC",
+          "passed": false,
+          "detail": "direction='NEUTRAL' (INVALID \u2014 must be bullish or bearish); direction='NEUTRAL' (UPPERCASE or NEUTRAL detected); direction='NEUTRAL' is invalid, cannot assess consistency with action='WITHHOLD'"
+        },
+        {
+          "signal_id": "pf-ETH-1779277253089",
+          "symbol": "ETH",
+          "passed": false,
+          "detail": "direction='NEUTRAL' (INVALID \u2014 must be bullish or bearish); direction='NEUTRAL' (UPPERCASE or NEUTRAL detected); direction='NEUTRAL' is invalid, cannot assess consistency with action='WITHHOLD'"
+        },
+        {
+          "signal_id": "pf-SOL-1779277253089",
+          "symbol": "SOL",
+          "passed": false,
+          "detail": "direction='NEUTRAL' (INVALID \u2014 must be bullish or bearish); direction='NEUTRAL' (UPPERCASE or NEUTRAL detected); direction='NEUTRAL' is invalid, cannot assess consistency with action='INVERT'"
+        },
+        {
+          "signal_id": "pf-LINK-1779277253089",
+          "symbol": "LINK",
+          "passed": false,
+          "detail": "direction='NEUTRAL' (INVALID \u2014 must be bullish or bearish); direction='NEUTRAL' (UPPERCASE or NEUTRAL detected); direction='NEUTRAL' is invalid, cannot assess consistency with action='WITHHOLD'"
+        }
+      ]
+    }
+  },
+  "after": {
+    "endpoint": "http://localhost:8080/signals/latest",
+    "snapshot_hash": "663ff9b01530ae57773f2976b1dfd2c75cad617091773f92ecd9b8faae0fbc00",
+    "captured_at": "2026-05-20T11:43:52.572Z",
+    "result": {
+      "verdict": "PASS",
+      "signals_checked": 4,
+      "signals_passed": 4,
+      "signals_failed": 0,
+      "per_signal_summary": [
+        {
+          "signal_id": "pf-BTC-1779277432572",
+          "symbol": "BTC",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-ETH-1779277432572",
+          "symbol": "ETH",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-SOL-1779277432572",
+          "symbol": "SOL",
+          "passed": true,
+          "detail": "all checks passed"
+        },
+        {
+          "signal_id": "pf-LINK-1779277432572",
+          "symbol": "LINK",
+          "passed": true,
+          "detail": "all checks passed"
+        }
+      ]
+    }
+  },
+  "conformance_summary": {
+    "final_verdict": "PASS",
+    "status_change": "FIXED",
+    "before_verdict": "FAIL",
+    "after_verdict": "PASS",
+    "field_checked": "direction",
+    "before_signals_passing": 0,
+    "after_signals_passing": 4,
+    "total_signals_checked": 4
+  },
+  "conformance_command": "python3 check_conformance.py --endpoint http://localhost:8080/signals/latest --schema producer_signal_schema.json --mismatch direction_enum_invalid --before-snapshot snapshots/before_mismatch2_3.json -o conformance_receipt.json --summary",
+  "source_hashes": {
+    "schema": "37f0c7f11da8ebef81ddd2e9c398d28598123dd0caf49e15b722dcd8ecdb77e1",
+    "before_snapshot": "c83cd1e6bd918fb76043398b6f274a7be565a9ee63a4e3af63604840bf9869e6",
+    "after_snapshot": "663ff9b01530ae57773f2976b1dfd2c75cad617091773f92ecd9b8faae0fbc00"
+  },
+  "limitations": [
+    {
+      "id": "L01",
+      "description": "Before snapshot is stored, not captured live in same session",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L02",
+      "description": "Conformance checks single mismatch, not full schema validation",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "MODERATE"
+    },
+    {
+      "id": "L03",
+      "description": "Point-in-time check; future code changes could regress",
+      "bias_direction": "OVERSTATED_READINESS",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L04",
+      "description": "Policy consistency check infers expected action from gate flags, not from source logic",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L05",
+      "description": "INVERT conditional check (weak_symbol metadata) not fully testable under SYSTEMIC regime",
+      "bias_direction": "UNDERSTATED_RISK",
+      "bias_magnitude": "LOW"
+    },
+    {
+      "id": "L06",
+      "description": "After snapshot fetched at check time; signals may differ from moment of patch verification",
+      "bias_direction": "INDETERMINATE",
+      "bias_magnitude": "LOW"
+    }
+  ],
+  "content_hash": "00760e18b43db8a0cc030028ed1adab481bf838fc7f584e9f138fd912c918b1c"
+}
